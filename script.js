@@ -79,6 +79,8 @@ function stopAudio() {
 
         // Disable the stop button
         stopButton.disabled = true;
+        // Enable the start button
+        startButton.disabled = false;
     }
 }
 
