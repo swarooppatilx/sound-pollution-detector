@@ -59,6 +59,9 @@ function startAudio() {
 
             // Enable the stop button
             stopButton.disabled = false;
+            // Disable the start button
+            startButton.disabled = true;
+            
         })
         .catch(error => {
             console.error('Error accessing microphone:', error);
