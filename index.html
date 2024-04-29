@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Pollution Detector</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Sound Pollution Detector</h1>
+    <div class="controls">
+        <button id="startButton">Start Audio</button>
+        <button id="stopButton" disabled>Stop Audio</button>
+    </div>
+    <div class="canvas-container">
+        <canvas id="barGraph"></canvas>
+    </div>
+    <div id="decibelInfo">
+        <p>Decibel Level: <span id="decibelLevel">-</span></p>
+        <p>Decibel Value: <span id="decibelValue">-</span></p>
+        <p>Threshold: <span id="thresholdValue">-</span> dB</p>
+        <p id="warningMessage" style="display: none; color: red;">Warning: Potential Sound Pollution!</p>
+        <p>The Government has chalked out standard for noise pollution The ambient noise standards have been notified for different categories like, industrial, commercial and residential areas and silence zones.
+            It is 55 dB during ‘day time’ and 45 dB Leq during ‘night time’ for residential areas. ‘Day time’ and ‘night time’ mean 6.00 am to 10.00 pm and 10.00 pm to 6.00 am, respectively</p>
+        <a href="https://pib.gov.in/newsite/PrintRelease.aspx?relid=67367">Read More</a>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
