@@ -4,7 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sound Pollution Detector</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .canvas-container {
+            margin: 0 auto;
+            max-width: 100%;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #f0f0f0;
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        #decibelInfo {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+
+        #warningMessage {
+            color: red;
+        }
+    </style>
 </head>
 <body>
     <h1>Sound Pollution Detector</h1>
@@ -16,14 +58,176 @@
         <canvas id="barGraph"></canvas>
     </div>
     <div id="decibelInfo">
-        <p>Decibel Level: <span id="decibelLevel">-</span></p>
-        <p>Decibel Value: <span id="decibelValue">-</span></p>
+        <p>Decibel Level: <span id="decibelLevel">-</span> dB</p>
         <p>Threshold: <span id="thresholdValue">-</span> dB</p>
-        <p id="warningMessage" style="display: none; color: red;">Warning: Potential Sound Pollution!</p>
+        <p id="warningMessage" style="display: none;">Warning: Potential Sound Pollution!</p>
+        <p>Minimum Decibel Level: <span id="minDecibel">-</span> dB</p>
+        <p>Maximum Decibel Level: <span id="maxDecibel">-</span> dB</p>
+        <p>Average Decibel Level: <span id="avgDecibel">-</span> dB</p>
         <p>
-            Residents are advised that noise levels should not surpass 55 dB during the day and 45 dB during the night, as outlined by Government of India regulations. 
+            Residents are advised that noise levels should not surpass 55 dB during the day and 45 dB during the night, as outlined by Government of India regulations.
             <a href="https://pib.gov.in/newsite/PrintRelease.aspx?relid=67367">Read More</a>
+        </p>
     </div>
-    <script src="script.js"></script>
+
+    <script>
+        const canvas = document.getElementById('barGraph');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = 800;
+        canvas.height = 400;
+
+        const decibelLevelElement = document.getElementById('decibelLevel');
+        const thresholdValueElement = document.getElementById('thresholdValue');
+        const warningMessageElement = document.getElementById('warningMessage');
+        const minDecibelElement = document.getElementById('minDecibel');
+        const maxDecibelElement = document.getElementById('maxDecibel');
+        const avgDecibelElement = document.getElementById('avgDecibel');
+
+        let audioContext, analyserNode, source, dataArray;
+        const barCount = 512;
+        const data = new Uint8Array(barCount);
+        let minDecibel = Infinity;
+        let maxDecibel = -Infinity;
+        let decibelSum = 0;
+        let decibelCount = 0;
+
+        let intervalId = null;
+        const intervalDuration = 3000; // 3 seconds interval
+
+        function getCurrentHour() {
+            const now = new Date();
+            return now.getHours() + (now.getMinutes() / 60);
+        }
+
+        function calculateThreshold() {
+            const currentHour = getCurrentHour();
+            return currentHour >= 6 && currentHour < 22 ? 55 : 45;
+        }
+
+        function updateThreshold() {
+            thresholdValueElement.textContent = calculateThreshold();
+        }
+
+        function startAudio() {
+            clearInterval(intervalId); // Clear any existing interval
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    audioContext = new AudioContext();
+                    analyserNode = audioContext.createAnalyser();
+                    source = audioContext.createMediaStreamSource(stream);
+                    analyserNode.fftSize = 2048;
+                    dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+
+                    source.connect(analyserNode);
+
+                    intervalId = setInterval(() => {
+                        computeStatistics();
+                        resetStatistics();
+                    }, intervalDuration);
+
+                    animationLoop();
+
+                    stopButton.disabled = false;
+                    startButton.disabled = true;
+                })
+                .catch(error => {
+                    console.error('Error accessing microphone:', error);
+                });
+        }
+
+        function stopAudio() {
+            clearInterval(intervalId);
+            if (source) {
+                source.disconnect();
+                audioContext.close();
+                source = null;
+                audioContext = null;
+                dataArray = null;
+
+                stopButton.disabled = true;
+                startButton.disabled = false;
+            }
+        }
+
+ function drawBarGraph() {
+    const barWidth = canvas.width / barCount;
+    const bottomOffset = canvas.height - 50;
+    const scaleFactor = 5;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = 0; i < barCount; i++) {
+        const barHeight = (data[i] / 256) * (canvas.height - bottomOffset) * scaleFactor;
+        ctx.beginPath();
+        ctx.moveTo(i * barWidth, bottomOffset);
+        ctx.lineTo(i * barWidth, bottomOffset - barHeight);
+
+        // Change color to red if decibel level surpasses threshold
+        const isAboveThreshold = (data[i] / 256 * 120) >= thresholdValueElement.textContent;
+        ctx.strokeStyle = isAboveThreshold ? 'red' : 'black';
+
+        ctx.stroke();
+    }
+}
+
+
+        function computeStatistics() {
+            minDecibelElement.textContent = minDecibel === Infinity ? '-' : minDecibel.toFixed(2);
+            maxDecibelElement.textContent = maxDecibel === -Infinity ? '-' : maxDecibel.toFixed(2);
+            avgDecibelElement.textContent = decibelCount === 0 ? '-' : (decibelSum / decibelCount).toFixed(2);
+        }
+
+        function resetStatistics() {
+            minDecibel = Infinity;
+            maxDecibel = -Infinity;
+            decibelSum = 0;
+            decibelCount = 0;
+        }
+
+        function updateDecibelInfo(calibratedDecibelLevel) {
+            decibelLevelElement.textContent = calibratedDecibelLevel.toFixed(2);
+
+            const isAboveThreshold = calibratedDecibelLevel >= thresholdValueElement.textContent;
+            warningMessageElement.style.display = isAboveThreshold ? 'block' : 'none';
+
+    
+            minDecibel = Math.min(minDecibel, calibratedDecibelLevel);
+            maxDecibel = Math.max(maxDecibel, calibratedDecibelLevel);
+            decibelSum += calibratedDecibelLevel;
+            decibelCount++;
+        }
+
+        function animationLoop() {
+            analyserNode.getByteFrequencyData(data);
+            drawBarGraph();
+
+            analyserNode.getByteTimeDomainData(dataArray);
+
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += Math.abs(dataArray[i] - 128);
+
+ // Convert to signed values centered around 128
+            }
+            const rms = Math.sqrt(sum / dataArray.length);
+            const decibelLevel = 20 * Math.log10(rms / 128);
+
+            // Apply a calibration factor (adjust as needed)
+            const calibratedDecibelLevel = decibelLevel + 120; // Adjusted calibration factor to match the discrepancy
+
+            updateDecibelInfo(calibratedDecibelLevel);
+
+            requestAnimationFrame(animationLoop);
+        }
+
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+
+        startButton.addEventListener('click', startAudio);
+        stopButton.addEventListener('click', stopAudio);
+
+        updateThreshold(); // Update threshold value initially
+    </script>
 </body>
 </html>
