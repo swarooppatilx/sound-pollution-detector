@@ -150,23 +150,86 @@
             }
         }
 
- function drawBarGraph() {
+function drawBarGraph() {
     const barWidth = canvas.width / barCount;
     const bottomOffset = canvas.height - 50;
     const scaleFactor = 5;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Determine whether it's daytime or nighttime
+    const isDaytime = getCurrentHour() >= 6 && getCurrentHour() < 22;
+
+    if (isDaytime) {
+        // Draw daytime legend horizontally at the top right corner
+        const legendColors = ['blue', 'violet', 'orange', 'red'];
+        const legendValuesDay = [50, 55, 65, 75];
+
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+
+        legendValuesDay.forEach((value, index) => {
+            ctx.fillStyle = legendColors[index];
+            ctx.fillRect(canvas.width - (index * 60 + 60), 10, 40, 20);
+            ctx.fillStyle = "black"; // Set text color to black
+            ctx.fillText(value + " dB", canvas.width - (index * 60 + 40), 40 + 5); // Add margin of 5 pixels above the text
+        });
+    } else {
+        // Draw nighttime legend horizontally at the top right corner
+        const legendColors = ['blue', 'violet', 'orange', 'red'];
+        const legendValuesNight = [40, 45, 55, 70];
+
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+
+        legendValuesNight.forEach((value, index) => {
+            ctx.fillStyle = legendColors[index];
+            ctx.fillRect(canvas.width - (index * 60 + 60), 10, 40, 20);
+            ctx.fillStyle = "black"; // Set text color to black
+            ctx.fillText(value + " dB", canvas.width - (index * 60 + 40), 40 + 5); // Add margin of 5 pixels above the text
+        });
+    }
+
+    // Draw graph bars
     for (let i = 0; i < barCount; i++) {
         const barHeight = (data[i] / 256) * (canvas.height - bottomOffset) * scaleFactor;
         ctx.beginPath();
         ctx.moveTo(i * barWidth, bottomOffset);
         ctx.lineTo(i * barWidth, bottomOffset - barHeight);
 
-        // Change color to red if decibel level surpasses threshold
-        const isAboveThreshold = (data[i] / 256 * 120) >= thresholdValueElement.textContent;
-        ctx.strokeStyle = isAboveThreshold ? 'red' : 'black';
+        // Determine color based on decibel value and time of day
+        let color;
+        const decibel = (data[i] / 256 * 120);
+        
+        if (isDaytime) {
+            if (decibel >= 75) {
+                color = 'red';
+            } else if (decibel >= 65) {
+                color = 'orange';
+            } else if (decibel >= 55) {
+                color = 'violet';
+            } else if (decibel >= 50) {
+                color = 'blue';
+            } else {
+                color = 'black'; // Default color
+            }
+        } else { // Nighttime
+            if (decibel >= 70) {
+                color = 'red';
+            } else if (decibel >= 55) {
+                color = 'orange';
+            } else if (decibel >= 45) {
+                color = 'violet';
+            } else if (decibel >= 40) {
+                color = 'blue';
+            } else {
+                color = 'black'; // Default color
+            }
+        }
 
+        ctx.strokeStyle = color;
         ctx.stroke();
     }
 }
